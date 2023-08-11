@@ -88,8 +88,6 @@ echo "Getting our auth token for Client: ${CID}"
 FULLTOKEN=$(curl -s -X POST -d "client_id=${CID}&client_secret=${CSECRET}&grant_type=client_credentials" ${TOKENURI})
 TOKEN=$(echo ${FULLTOKEN} | jq -r .access_token)
 
-# Get Application
-# Get Deployment of a given app
 echo "Looking for all deployments!"
 DEPLOYMENTS=$(curl -s ${DEPLOYMENTSURI} -H "Accept: application/json" -H "Authorization: Bearer ${TOKEN}")
 
@@ -101,14 +99,17 @@ echo "Saving the current application state"
 APPSTATE=$(curl -s ${APPDEPLOYURI} -H "Accept: application/json" -H "Authorization: Bearer ${TOKEN}")
 
 echo "Getting existing properties of ${APPNAME}"
-EXISTINGPROPS=$(echo ${APPSTATE} | jq -r '.application.configuration."mule.agent.application.properties.service".properties')
+EXISTINGPROPS=$(echo "${APPSTATE}" | jq -r '.application.configuration."mule.agent.application.properties.service".properties')
 
 echo "Adding user.timezone and oracle.jdbc.timezoneAsRegion to properties manifest"
-ALTEREDPROPS=$(echo $EXISTINGPROPS | jq '. += {"user.timezone":"Etc/UTC","oracle.jdbc.timezoneAsRegion":false}')
+ALTEREDPROPS=$(echo "${EXISTINGPROPS}" | jq '. += {"user.timezone":"Etc/UTC","oracle.jdbc.timezoneAsRegion":false}')
+
+echo "Writing all of the properties (new and existing) to ${PROPSJSON} to solve cURL Arguments List Too Long Error"
 echo "{\"application\": {\"configuration\":{\"mule.agent.application.properties.service\":{\"properties\":${ALTEREDPROPS}}}}}" > ${PROPSJSON}
 
 echo "Updating ${APPNAME} with new properties now."
 QUIETYOU=$(curl -s -X PATCH ${APPDEPLOYURI} -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' -H 'Accept: application/json' -d @${PROPSJSON})
+
 # TODO: This is a validation to see if the last command actually succeeded.
 # Honestly - it may not validate the curl as much as it validates the assignment.
 # I didn't have time to test this.
@@ -116,4 +117,6 @@ if [ $? != 0 ]; then
     echo "Update failed!";
 else
     echo "Update succeeded!";
+    echo "Deleting JSON"
+    rm -f ${PROPSJSON};
 fi;

@@ -1,5 +1,6 @@
 {"application": {"configuration":{"mule.agent.application.properties.service":{"properties":{
   "foo": "bar",
+  "update.contract_state.batch.schedule": "0 0 0/2 1/1 * ? *",
   "user.timezone": "Etc/UTC",
   "oracle.jdbc.timezoneAsRegion": false
 }}}}}
