@@ -6,12 +6,21 @@
 #     Read   Applications
 # https://help.mulesoft.com/s/article/Oracle-JDBC-timezone-region-not-found-in-CloudHub
 
+# Client ID Variable
 CID=""
+# Client Secret Variable
 CSECRET=""
+
+##############################################
+## GETOPT VARIABLES + ARGUMENT PARSING START##
+##############################################
+
+# Initializing other variables that will be taking in via getopt
 unset -v ORGID
 unset -v ENVID
 unset -v APPNAME
 
+# Arguments for script
 LONG_ARGS="appname:,orgid:,environmentid:,help"
 SHORT_ARGS="n:,i:,s:,o:,e:,h"
 
@@ -58,6 +67,10 @@ do
   esac
 done
 
+##############################################
+## GETOPT VARIABLES + ARGUMENT PARSING END  ##
+##############################################
+
 echo "Updating App: ${APPNAME}"
 echo "  Org: ${ORGID}"
 echo "  Environment: ${ENVID}"
@@ -70,7 +83,7 @@ ORGSURI="${BASEURI}/accounts/api/organizations"
 ENVIRONMENTURI="${BASEURI}/apiplatform/repository/v2/organizations/${ORGID}/environments"
 DEPLOYMENTSURI="${BASEURI}/amc/application-manager/api/v2/organizations/${ORGID}/environments/${ENVID}/deployments"
 
-echo "Getting our auth token to do the thing!"
+echo "Getting our auth token for Client: ${CID}"
 FULLTOKEN=$(curl -s -X POST -d "client_id=${CID}&client_secret=${CSECRET}&grant_type=client_credentials" ${TOKENURI})
 TOKEN=$(echo ${FULLTOKEN} | jq -r .access_token)
 
@@ -82,17 +95,21 @@ DEPLOYMENTS=$(curl -s ${DEPLOYMENTSURI} -H "Accept: application/json" -H "Author
 echo "Filtering deployments on name (${APPNAME})"
 APPID=$(echo ${DEPLOYMENTS} | jq -r ".items | map(select(.name == \"${APPNAME}\")) | first | .id")
 APPDEPLOYURI="${DEPLOYMENTSURI}/${APPID}"
+
+echo "Saving the current application state"
 APPSTATE=$(curl -s ${APPDEPLOYURI} -H "Accept: application/json" -H "Authorization: Bearer ${TOKEN}")
 
-# EXISTINGPROPS
 echo "Getting existing properties of ${APPNAME}"
 EXISTINGPROPS=$(echo ${APPSTATE} | jq -r '.application.configuration."mule.agent.application.properties.service".properties')
+
 echo "Adding user.timezone and oracle.jdbc.timezoneAsRegion to properties manifest"
 ALTEREDPROPS=$(echo $EXISTINGPROPS | jq '. += {"user.timezone":"Etc/UTC","oracle.jdbc.timezoneAsRegion":false}')
 
-# Update Application
 echo "Updating ${APPNAME} with new properties now."
 QUIETYOU=$(curl -s -X PATCH ${APPDEPLOYURI} -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' -H 'Accept: application/json' -d "{\"application\": {\"configuration\":{\"mule.agent.application.properties.service\":{\"properties\":${ALTEREDPROPS}}}}}")
+# TODO: This is a validation to see if the last command actually succeeded.
+# Honestly - it may not validate the curl as much as it validates the assignment.
+# I didn't have time to test this.
 if [ $? != 0 ]; then
     echo "Update failed!";
 else
