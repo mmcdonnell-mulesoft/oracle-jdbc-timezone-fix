@@ -1,0 +1,5 @@
+{"application": {"configuration":{"mule.agent.application.properties.service":{"properties":{
+  "foo": "bar",
+  "user.timezone": "Etc/UTC",
+  "oracle.jdbc.timezoneAsRegion": false
+}}}}}

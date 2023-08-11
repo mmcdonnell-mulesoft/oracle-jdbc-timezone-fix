@@ -76,6 +76,7 @@ echo "  Org: ${ORGID}"
 echo "  Environment: ${ENVID}"
 
 #constants
+PROPSJSON="${APPNAME}.props.json"
 BASEURI="https://anypoint.mulesoft.com/"
 TOKENURI="${BASEURI}/accounts/api/v2/oauth2/token"
 MEURI="${BASEURI}/accounts/api/profile"
@@ -104,9 +105,10 @@ EXISTINGPROPS=$(echo ${APPSTATE} | jq -r '.application.configuration."mule.agent
 
 echo "Adding user.timezone and oracle.jdbc.timezoneAsRegion to properties manifest"
 ALTEREDPROPS=$(echo $EXISTINGPROPS | jq '. += {"user.timezone":"Etc/UTC","oracle.jdbc.timezoneAsRegion":false}')
+echo "{\"application\": {\"configuration\":{\"mule.agent.application.properties.service\":{\"properties\":${ALTEREDPROPS}}}}}" > ${PROPSJSON}
 
 echo "Updating ${APPNAME} with new properties now."
-QUIETYOU=$(curl -s -X PATCH ${APPDEPLOYURI} -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' -H 'Accept: application/json' -d "{\"application\": {\"configuration\":{\"mule.agent.application.properties.service\":{\"properties\":${ALTEREDPROPS}}}}}")
+QUIETYOU=$(curl -s -X PATCH ${APPDEPLOYURI} -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' -H 'Accept: application/json' -d @${PROPSJSON})
 # TODO: This is a validation to see if the last command actually succeeded.
 # Honestly - it may not validate the curl as much as it validates the assignment.
 # I didn't have time to test this.
